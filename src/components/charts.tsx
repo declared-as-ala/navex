@@ -65,17 +65,18 @@ export function SingleBar({ data, height = 240, onClick }: {
 }
 
 // Grouped bars (e.g. expected vs scanned vs missing per lot)
-export function GroupedBar({ data, series, height = 260, onBarClick }: {
+export function GroupedBar({ data, series, height = 260, onBarClick, xKey = "name" }: {
   data: any[]
   series: { key: string; name: string; color: string }[]
   height?: number
   onBarClick?: (d: any) => void
+  xKey?: string
 }) {
   return (
     <ResponsiveContainer width="100%" height={height}>
       <BarChart data={data} margin={{ left: 0, right: 8 }}>
         <CartesianGrid vertical={false} stroke="#f1f5f9" />
-        <XAxis dataKey="batchNumber" tick={{ fontSize: 10, fill: "#475569" }} interval={0} angle={-15} textAnchor="end" height={50} />
+        <XAxis dataKey={xKey} tick={{ fontSize: 10, fill: "#475569" }} interval={0} angle={-15} textAnchor="end" height={50} />
         <YAxis tick={{ fontSize: 11, fill: "#94a3b8" }} allowDecimals={false} />
         <Tooltip contentStyle={tooltipStyle} />
         <Legend wrapperStyle={{ fontSize: 12 }} />

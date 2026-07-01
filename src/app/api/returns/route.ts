@@ -2,39 +2,41 @@ import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { connectDB } from "@/lib/db"
 import { Order } from "@/lib/models/Order"
+import { NOT_CANCELLED, dateRangeFilter } from "@/lib/parcel-status"
 
 /**
- * Returns are derived directly from parcel state, never a separate collection.
- *  - RETURN_EXPECTED  : Navex announced a return, not yet physically back.
- *  - RETURN_CONFIRMED : warehouse physically scanned the returned parcel.
+ * Returns control (anti-loss). Cards + the list of MISSING returns
+ * (announced by Navex, not yet physically scanned), longest wait first.
  *
- * Query ?status=expected|confirmed|all (default all).
+ * Query: range=today|7d|30d|custom (+from,to on returnExpectedAt),
+ *        minWait=3|7 (announced more than N days ago).
  */
 export async function GET(req: NextRequest) {
   const session = await auth()
   if (!session?.user) return NextResponse.json({ success: false, error: "Non authentifié" }, { status: 401 })
 
   await connectDB()
-  const status = new URL(req.url).searchParams.get("status") || "all"
+  const sp = new URL(req.url).searchParams
 
-  const filter: any = {}
-  if (status === "expected") filter.physicalStatus = "RETURN_EXPECTED"
-  else if (status === "confirmed") filter.physicalStatus = "RETURN_CONFIRMED"
-  else filter.physicalStatus = { $in: ["RETURN_EXPECTED", "RETURN_CONFIRMED"] }
-
-  const [announced, stillExpected, confirmed, parcels] = await Promise.all([
-    Order.countDocuments({ navexStatus: "RETURN" }),
-    Order.countDocuments({ physicalStatus: "RETURN_EXPECTED" }),
-    Order.countDocuments({ physicalStatus: "RETURN_CONFIRMED" }),
-    Order.find(filter)
-      .select("navexTrackingCode customer codAmount designation navexCreatedAt physicalStatus navexStatus returnExpectedAt returnConfirmedAt")
-      .sort({ returnExpectedAt: 1, updatedAt: -1 })
-      .limit(500)
-      .lean(),
+  const [announced, confirmed, missing] = await Promise.all([
+    Order.countDocuments({ ...NOT_CANCELLED, navexStatus: "RETURN" }),
+    Order.countDocuments({ ...NOT_CANCELLED, physicalStatus: "RETURN_CONFIRMED" }),
+    Order.countDocuments({ ...NOT_CANCELLED, navexStatus: "RETURN", physicalStatus: { $ne: "RETURN_CONFIRMED" } }),
   ])
 
-  return NextResponse.json({
-    success: true,
-    data: { summary: { announced, confirmed, stillMissing: stillExpected }, parcels },
-  })
+  const filter: any = { ...NOT_CANCELLED, navexStatus: "RETURN", physicalStatus: { $ne: "RETURN_CONFIRMED" } }
+  const range = sp.get("range") || undefined
+  if (range) Object.assign(filter, dateRangeFilter("returnExpectedAt", range, sp.get("from") || undefined, sp.get("to") || undefined))
+  const minWait = parseInt(sp.get("minWait") || "", 10)
+  if (Number.isFinite(minWait) && minWait > 0) {
+    filter.returnExpectedAt = { ...(filter.returnExpectedAt || {}), $lte: new Date(Date.now() - minWait * 86400000) }
+  }
+
+  const parcels = await Order.find(filter)
+    .select("navexTrackingCode codAmount designation handedToNavexAt returnExpectedAt")
+    .sort({ returnExpectedAt: 1 }) // oldest announcement = longest wait first
+    .limit(1000)
+    .lean()
+
+  return NextResponse.json({ success: true, data: { summary: { announced, confirmed, missing }, parcels } })
 }

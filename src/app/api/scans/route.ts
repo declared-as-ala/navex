@@ -7,6 +7,7 @@ import { scanSchema } from "@/lib/validators"
 import { decideRemiseExisting, decideReturnReceive } from "@/lib/scan-engine"
 import { navexService } from "@/lib/navex/navex-client"
 import { mapToSimpleNavexStatus } from "@/lib/navex/navex-status.mapper"
+import { mainStatus } from "@/lib/parcel-status"
 
 const SCAN_ROLES = ["SUPER_ADMIN", "ADMIN", "MANAGER", "WAREHOUSE_OPERATOR"]
 const OVERRIDE_ROLES = ["SUPER_ADMIN", "ADMIN"]
@@ -25,6 +26,8 @@ function parcelInfo(p: any) {
     navexCreatedAt: p.navexCreatedAt,
     navexStatus: p.navexStatus,
     physicalStatus: p.physicalStatus,
+    paymentStatus: p.paymentStatus,
+    mainStatus: mainStatus(p),
     handedToNavexAt: p.handedToNavexAt,
     returnExpectedAt: p.returnExpectedAt,
     returnConfirmedAt: p.returnConfirmedAt,

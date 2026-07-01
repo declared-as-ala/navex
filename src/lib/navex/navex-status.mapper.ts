@@ -39,15 +39,23 @@ export function mapNavexStatus(navexStatus: string): {
 /** Map a raw Navex status string to the simplified NavexStatus used by parcels. */
 export function mapToSimpleNavexStatus(
   navexStatus: string
-): "PENDING" | "IN_TRANSIT" | "OUT_FOR_DELIVERY" | "DELIVERED" | "RETURN" | "UNKNOWN" {
+): "PENDING" | "IN_TRANSIT" | "OUT_FOR_DELIVERY" | "DELIVERED" | "RETURN" | "CANCELLED" | "UNKNOWN" {
   const n = navexStatus?.toLowerCase().trim() || ""
   if (!n) return "UNKNOWN"
+  if (/(annul|cancel)/.test(n)) return "CANCELLED"
   if (/(en[_ ]?cours[_ ]?(de[_ ]?)?livraison|out[_ ]?for|en[_ ]?livraison)/.test(n)) return "OUT_FOR_DELIVERY"
   if (/(en[_ ]?attente|pending|cree|créé|pris[_ ]?en[_ ]?charge)/.test(n)) return "PENDING"
   if (/(en[_ ]?cours|in[_ ]?transit|achemin)/.test(n)) return "IN_TRANSIT"
   if (/(livr|deliver|paye|payé)/.test(n)) return "DELIVERED"
-  if (/(retour|return|refus|annul|cancel)/.test(n)) return "RETURN"
+  if (/(retour|return|refus)/.test(n)) return "RETURN"
   return "UNKNOWN"
+}
+
+/** Does a raw Navex status indicate the COD has been paid? */
+export function isNavexPaid(navexStatus: string): boolean {
+  const n = navexStatus?.toLowerCase().trim() || ""
+  if (/non[_ ]?paye|non[_ ]?payé|impaye|impayé/.test(n)) return false
+  return /(paye|payé|paid|regl|réglé)/.test(n)
 }
 
 export function mapNavexRecetteStatus(navexStatus: string): "delivered" | "returned" | "unknown" {

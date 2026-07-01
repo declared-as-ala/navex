@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth"
 import { connectDB } from "@/lib/db"
 import { Order } from "@/lib/models/Order"
 import { navexService } from "@/lib/navex/navex-client"
-import { mapToSimpleNavexStatus } from "@/lib/navex/navex-status.mapper"
+import { mapToSimpleNavexStatus, isNavexPaid } from "@/lib/navex/navex-status.mapper"
 
 const SYNC_ROLES = ["SUPER_ADMIN", "ADMIN", "MANAGER"]
 
@@ -44,15 +44,15 @@ export async function POST() {
       for (const update of response.shipments) {
         const parcel = active.find((p: any) => p.navexTrackingCode === update.tracking_code)
         if (!parcel) continue
+        const raw = update.status_label || update.status
         const simple = mapToSimpleNavexStatus(update.status)
         const set: Record<string, any> = {
           navexStatus: simple,
-          navexRawStatus: update.status_label || update.status,
+          navexRawStatus: raw,
           lastNavexSyncAt: new Date(),
         }
-        if (simple === "DELIVERED") {
-          set.deliveredAt = new Date()
-        }
+        if (simple === "DELIVERED") set.deliveredAt = new Date()
+        if (isNavexPaid(raw)) { set.paymentStatus = "PAID"; set.paidAt = new Date() }
         if (simple === "RETURN" && parcel.physicalStatus !== "RETURN_CONFIRMED") {
           set.physicalStatus = "RETURN_EXPECTED"
           set.returnExpectedAt = new Date()

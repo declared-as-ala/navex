@@ -7,7 +7,6 @@ import {
   LayoutDashboard,
   Package,
   ScanLine,
-  Truck,
   Undo2,
   Settings,
   ChevronLeft,
@@ -24,7 +23,6 @@ const items = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/colis", label: "Colis", icon: Package },
   { href: "/scan", label: "Scanner", icon: ScanLine },
-  { href: "/suivi", label: "Suivi Navex", icon: Truck },
   { href: "/returns", label: "Retours", icon: Undo2 },
   { href: "/settings", label: "Paramètres", icon: Settings },
 ]

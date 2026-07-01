@@ -24,13 +24,16 @@ export type NavexStatus =
   | "OUT_FOR_DELIVERY"
   | "DELIVERED"
   | "RETURN"
+  | "CANCELLED"   // Annulé — ignored in the whole UI
   | "UNKNOWN"
+
+export type PaymentStatus = "PENDING" | "PAID"
 
 export const PHYSICAL_STATUSES: PhysicalStatus[] = [
   "NOT_SCANNED", "HANDED_TO_NAVEX", "RETURN_EXPECTED", "RETURN_CONFIRMED",
 ]
 export const NAVEX_STATUSES: NavexStatus[] = [
-  "PENDING", "IN_TRANSIT", "OUT_FOR_DELIVERY", "DELIVERED", "RETURN", "UNKNOWN",
+  "PENDING", "IN_TRANSIT", "OUT_FOR_DELIVERY", "DELIVERED", "RETURN", "CANCELLED", "UNKNOWN",
 ]
 
 export interface ICustomer {
@@ -54,10 +57,12 @@ export interface IOrder extends Document {
   physicalStatus: PhysicalStatus
   navexStatus: NavexStatus
   navexRawStatus?: string
+  paymentStatus: PaymentStatus
 
   // lifecycle timestamps
   handedToNavexAt?: Date
   deliveredAt?: Date
+  paidAt?: Date
   returnExpectedAt?: Date
   returnConfirmedAt?: Date
   lastNavexSyncAt?: Date
@@ -95,9 +100,11 @@ const OrderSchema = new Schema<IOrder>(
     physicalStatus: { type: String, enum: PHYSICAL_STATUSES, default: "HANDED_TO_NAVEX" },
     navexStatus: { type: String, enum: NAVEX_STATUSES, default: "PENDING" },
     navexRawStatus: { type: String },
+    paymentStatus: { type: String, enum: ["PENDING", "PAID"], default: "PENDING" },
 
     handedToNavexAt: { type: Date },
     deliveredAt: { type: Date },
+    paidAt: { type: Date },
     returnExpectedAt: { type: Date },
     returnConfirmedAt: { type: Date },
     lastNavexSyncAt: { type: Date },

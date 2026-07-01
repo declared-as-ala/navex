@@ -28,13 +28,18 @@ const NAVEX: Record<string, { label: string; tone: Tone }> = {
   OUT_FOR_DELIVERY: { label: "En livraison", tone: "blue" },
   DELIVERED: { label: "Livré", tone: "green" },
   RETURN: { label: "Retour", tone: "orange" },
+  CANCELLED: { label: "Annulé", tone: "neutral" },
   UNKNOWN: { label: "Inconnu", tone: "red" },
 }
+const MAIN: Record<string, { label: string; tone: Tone }> = {
+  EN_COURS: { label: "En cours", tone: "blue" },
+  LIVRE: { label: "Livré", tone: "green" },
+  RETOUR_ATTENDU: { label: "Retour attendu", tone: "orange" },
+  RETOUR_CONFIRME: { label: "Retour confirmé", tone: "green" },
+}
 const PAYMENT: Record<string, { label: string; tone: Tone }> = {
-  COD_EXPECTED: { label: "COD attendu", tone: "neutral" },
-  DELIVERED_UNPAID: { label: "Livré non payé", tone: "orange" },
-  PAID_BY_NAVEX: { label: "Payé", tone: "green" },
-  PAYMENT_DISPUTE: { label: "Litige", tone: "red" },
+  PENDING: { label: "En attente", tone: "neutral" },
+  PAID: { label: "Payé", tone: "green" },
 }
 
 function Pill({ label, tone }: { label: string; tone: Tone }) {
@@ -51,6 +56,10 @@ export function PhysicalBadge({ status }: { status: string }) {
 }
 export function NavexBadge({ status }: { status: string }) {
   const s = NAVEX[status] || { label: status, tone: "neutral" as Tone }
+  return <Pill label={s.label} tone={s.tone} />
+}
+export function MainStatusBadge({ status }: { status: string }) {
+  const s = MAIN[status] || { label: status, tone: "neutral" as Tone }
   return <Pill label={s.label} tone={s.tone} />
 }
 export function PaymentBadge({ status }: { status: string }) {

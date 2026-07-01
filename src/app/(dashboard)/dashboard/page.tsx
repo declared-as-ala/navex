@@ -1,55 +1,75 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import Link from "next/link"
 import { PageHeader, EmptyState } from "@/components/parcel-ui"
 import { SkeletonPageHeader, SkeletonDashboardCards } from "@/components/skeletons"
 import { Button } from "@/components/ui/button"
-import { ChartCard, SingleBar, Donut } from "@/components/charts"
+import { ChartCard, SingleBar, GroupedBar, COLORS } from "@/components/charts"
 import {
-  ScanLine, PackageCheck, Truck, CheckCircle2, CornerUpLeft, RotateCcw, AlertTriangle, HelpCircle,
+  ScanLine, Truck, CheckCircle2, Banknote, CornerUpLeft, RotateCcw, AlertTriangle, HelpCircle,
 } from "lucide-react"
 
 interface Stats {
   cards: Record<string, number>
-  remisChart: any[]
+  activityByDay: any[]
   returnsChart: any[]
   isEmpty: boolean
 }
 
 const CARDS: { key: string; label: string; icon: any; tone: string }[] = [
-  { key: "scanned", label: "Colis scannés", icon: ScanLine, tone: "text-blue-600" },
-  { key: "handedToNavex", label: "Remis à Navex", icon: PackageCheck, tone: "text-indigo-600" },
-  { key: "inTransit", label: "En transit", icon: Truck, tone: "text-blue-600" },
-  { key: "delivered", label: "Livrés", icon: CheckCircle2, tone: "text-green-600" },
-  { key: "returnsAnnounced", label: "Retours annoncés", icon: CornerUpLeft, tone: "text-orange-600" },
-  { key: "returnsConfirmed", label: "Retours confirmés", icon: RotateCcw, tone: "text-green-600" },
-  { key: "returnsMissing", label: "Retours manquants", icon: AlertTriangle, tone: "text-red-600" },
-  { key: "noUpdate", label: "Sans mise à jour", icon: HelpCircle, tone: "text-slate-500" },
+  { key: "scannedToday", label: "Scannés aujourd'hui", icon: ScanLine, tone: "text-blue-600" },
+  { key: "enCours", label: "En cours", icon: Truck, tone: "text-blue-600" },
+  { key: "livres", label: "Livrés", icon: CheckCircle2, tone: "text-green-600" },
+  { key: "payes", label: "Payés", icon: Banknote, tone: "text-green-600" },
+  { key: "retoursAnnonces", label: "Retours annoncés", icon: CornerUpLeft, tone: "text-orange-600" },
+  { key: "retoursConfirmes", label: "Retours confirmés", icon: RotateCcw, tone: "text-green-600" },
+  { key: "retoursManquants", label: "Retours manquants", icon: AlertTriangle, tone: "text-red-600" },
+  { key: "sansMaj", label: "Sans mise à jour", icon: HelpCircle, tone: "text-slate-500" },
+]
+
+const RANGES = [
+  { value: "", label: "Tout" },
+  { value: "today", label: "Aujourd'hui" },
+  { value: "yesterday", label: "Hier" },
+  { value: "7d", label: "7 j" },
+  { value: "30d", label: "30 j" },
 ]
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<Stats | null>(null)
   const [loading, setLoading] = useState(true)
+  const [range, setRange] = useState("")
 
-  useEffect(() => {
-    fetch("/api/dashboard/stats").then((r) => r.json()).then((j) => setStats(j.data)).finally(() => setLoading(false))
-  }, [])
+  const load = useCallback(() => {
+    const p = new URLSearchParams()
+    if (range) p.set("range", range)
+    fetch(`/api/dashboard/stats?${p}`).then((r) => r.json()).then((j) => setStats(j.data)).finally(() => setLoading(false))
+  }, [range])
+  useEffect(() => { load() }, [load])
 
-  if (loading) return (
-    <div><SkeletonPageHeader /><SkeletonDashboardCards /></div>
-  )
+  if (loading && !stats) return <div><SkeletonPageHeader /><SkeletonDashboardCards /></div>
 
   return (
     <div>
-      <PageHeader title="Dashboard" subtitle="Contrôle des colis Navex" />
+      <PageHeader
+        title="Dashboard"
+        subtitle="Contrôle quotidien des colis Navex"
+        action={
+          <div className="flex flex-wrap gap-1.5">
+            {RANGES.map((r) => (
+              <button key={r.value} onClick={() => setRange(r.value)}
+                className={`rounded-lg px-2.5 py-1 text-xs font-medium ${range === r.value ? "bg-blue-700 text-white" : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"}`}>
+                {r.label}
+              </button>
+            ))}
+          </div>
+        }
+      />
 
       {stats?.isEmpty ? (
-        <EmptyState
-          title="Aucun colis scanné."
-          hint="Scannez les codes-barres Navex dans le Scanner pour commencer."
-          action={<Link href="/scan"><Button>Ouvrir le Scanner</Button></Link>}
-        />
+        <EmptyState title="Aucun colis scanné." hint="Scannez les codes-barres Navex dans le Scanner pour commencer."
+          action={<Link href="/scan"><Button>Ouvrir le Scanner</Button></Link>} />
       ) : (
         <>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -68,11 +88,23 @@ export default function DashboardPage() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-6">
-            <ChartCard title="Colis remis à Navex" subtitle="Livrés / Retours / En transit">
-              <Donut data={stats!.remisChart} centerLabel={stats!.cards.handedToNavex} />
+            <ChartCard title="Activité par jour" subtitle="Remis / Livrés / Retours annoncés / confirmés">
+              {stats && stats.activityByDay.length > 0 ? (
+                <GroupedBar
+                  data={stats.activityByDay}
+                  xKey="day"
+                  series={[
+                    { key: "remis", name: "Remis", color: COLORS.blue },
+                    { key: "livres", name: "Livrés", color: COLORS.green },
+                    { key: "retoursAnnonces", name: "Retours annoncés", color: COLORS.orange },
+                    { key: "retoursConfirmes", name: "Retours confirmés", color: COLORS.indigo },
+                  ]}
+                />
+              ) : <p className="text-sm text-slate-400 py-12 text-center">Aucune activité sur la période</p>}
             </ChartCard>
-            <ChartCard title="Contrôle des retours" subtitle="Annoncés → Confirmés → Manquants (anti-perte)">
-              <SingleBar height={200} data={stats!.returnsChart} />
+
+            <ChartCard title="Réconciliation des retours" subtitle="Annoncés → Confirmés → Manquants">
+              <SingleBar height={220} data={stats!.returnsChart} />
             </ChartCard>
           </div>
         </>

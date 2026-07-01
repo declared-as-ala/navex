@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState, useCallback } from "react"
-import { PageHeader, formatTND, NavexBadge, PhysicalBadge } from "@/components/parcel-ui"
+import { PageHeader, formatTND, NavexBadge, MainStatusBadge, PaymentBadge } from "@/components/parcel-ui"
 import { Button } from "@/components/ui/button"
 import { CheckCircle2, XCircle, PackageCheck, CornerUpLeft, Search, ShieldAlert } from "lucide-react"
 
@@ -27,8 +27,8 @@ function beep(ok: boolean) {
   } catch { /* no audio */ }
 }
 
-function frDate(d?: string) {
-  return d ? new Intl.DateTimeFormat("fr-FR", { timeZone: "Africa/Tunis", dateStyle: "short" }).format(new Date(d)) : "—"
+function frDate(d?: string, withTime = false) {
+  return d ? new Intl.DateTimeFormat("fr-FR", { timeZone: "Africa/Tunis", dateStyle: "short", ...(withTime ? { timeStyle: "short" } : {}) }).format(new Date(d)) : "—"
 }
 
 export default function ScannerPage() {
@@ -118,19 +118,17 @@ export default function ScannerPage() {
 
               {last.parcel && (
                 <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
-                  <Info label="Client" value={last.parcel.customerName || "—"} />
-                  <Info label="Téléphone" value={last.parcel.customerPhone || "—"} />
                   <Info label="COD" value={formatTND(last.parcel.codAmount)} />
-                  <Info label="Ville" value={last.parcel.city || "—"} />
-                  <Info label="Date ajout Navex" value={frDate(last.parcel.navexCreatedAt)} />
                   <Info label="Désignation" value={last.parcel.designation || "—"} />
+                  <Info label="Date ajout Navex" value={frDate(last.parcel.navexCreatedAt)} />
+                  <Info label="Date remise" value={frDate(last.parcel.handedToNavexAt, true)} />
+                  <div><p className="text-[11px] uppercase tracking-wide text-slate-400">Statut</p><div className="mt-0.5"><MainStatusBadge status={last.parcel.mainStatus} /></div></div>
+                  <div><p className="text-[11px] uppercase tracking-wide text-slate-400">Paiement</p><div className="mt-0.5"><PaymentBadge status={last.parcel.paymentStatus} /></div></div>
                   {mode === "VERIFY" && (
                     <>
                       <div><p className="text-[11px] uppercase tracking-wide text-slate-400">Statut Navex</p><div className="mt-0.5"><NavexBadge status={last.parcel.navexStatus} /></div></div>
-                      <div><p className="text-[11px] uppercase tracking-wide text-slate-400">Statut physique</p><div className="mt-0.5"><PhysicalBadge status={last.parcel.physicalStatus} /></div></div>
-                      <Info label="Date remise" value={frDate(last.parcel.handedToNavexAt)} />
                       <Info label="Retour annoncé" value={frDate(last.parcel.returnExpectedAt)} />
-                      <Info label="Retour confirmé" value={frDate(last.parcel.returnConfirmedAt)} />
+                      <Info label="Retour confirmé" value={frDate(last.parcel.returnConfirmedAt, true)} />
                     </>
                   )}
                 </div>
@@ -159,7 +157,7 @@ export default function ScannerPage() {
                 {h.ok ? <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" /> : <XCircle className="h-4 w-4 text-red-500 shrink-0" />}
                 <div className="min-w-0 flex-1">
                   <p className="text-xs font-mono text-slate-700 truncate">{h.code}</p>
-                  <p className={`text-[11px] truncate ${h.ok ? "text-slate-400" : "text-red-500"}`}>{h.ok && h.parcel ? `${h.parcel.customerName || "—"} · ${formatTND(h.parcel.codAmount)}` : h.message}</p>
+                  <p className={`text-[11px] truncate ${h.ok ? "text-slate-400" : "text-red-500"}`}>{h.ok && h.parcel ? formatTND(h.parcel.codAmount) : h.message}</p>
                 </div>
               </div>
             ))}
