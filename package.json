@@ -11,6 +11,7 @@
     "seed": "npx tsx scripts/seed.ts",
     "reset": "npx tsx scripts/reset-data.ts",
     "sync-indexes": "npx tsx scripts/sync-indexes.ts",
+    "migrate-status": "npx tsx scripts/migrate-status.ts",
     "test:scenario": "npx tsx scripts/test-scenario.ts"
   },
   "dependencies": {
