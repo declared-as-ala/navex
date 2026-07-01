@@ -50,8 +50,10 @@ function frDate(d?: string, withTime = false) {
 export default function ColisPage() {
   const [parcels, setParcels] = useState<Parcel[]>([])
   const [total, setTotal] = useState(0)
-  const [summary, setSummary] = useState<Record<string, number>>({})
+  const [summary, setSummary] = useState<Record<string, { count: number; cod: number }>>({})
   const [charts, setCharts] = useState<{ activityByDay: any[]; agingBuckets: any[]; atRiskCod: number } | null>(null)
+  const [delay, setDelay] = useState(3)
+  const [delayInput, setDelayInput] = useState("3")
   const [isEmpty, setIsEmpty] = useState(false)
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
@@ -84,7 +86,7 @@ export default function ColisPage() {
     applyDate(p)
     p.set("limit", "1000")
     fetch(`/api/parcels?${p}`).then((r) => r.json())
-      .then((j) => { setParcels(j.data.parcels); setTotal(j.data.total); setSummary(j.data.summary || {}); setIsEmpty(j.data.isEmpty) })
+      .then((j) => { setParcels(j.data.parcels); setTotal(j.data.total); setSummary(j.data.summary || {}); setIsEmpty(j.data.isEmpty); if (j.data.delay) { setDelay(j.data.delay); setDelayInput(String(j.data.delay)) } })
       .finally(() => setLoading(false))
 
     const cp = new URLSearchParams()
@@ -102,6 +104,15 @@ export default function ColisPage() {
     setSyncing(false)
     if (j.success) { toast.success(`${j.data.paid} colis marqués Payé`); load() }
     else toast.error(j.error?.message || j.error || "Synchronisation indisponible")
+  }
+
+  async function saveDelay() {
+    const n = parseInt(delayInput, 10)
+    if (!Number.isFinite(n) || n < 1) { setDelayInput(String(delay)); return }
+    if (n === delay) return
+    const j = await (await fetch("/api/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ verifyDelayDays: String(n) }) })).json()
+    if (j.success) { toast.success(`Délai Dhay3in : ${n} jours`); setDelay(n); load() }
+    else toast.error("Impossible d'enregistrer le délai")
   }
 
   async function removeSelected() {
@@ -126,7 +137,7 @@ export default function ColisPage() {
           </div>
         } />
 
-      {/* Summary (respects date filter) */}
+      {/* Summary (respects date filter): count + montant COD */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
         {[
           { key: "enCours", view: "en_cours", label: "En cours", tone: "text-blue-600", ring: "ring-blue-200" },
@@ -137,9 +148,22 @@ export default function ColisPage() {
           <button key={c.key} onClick={() => setView(view === c.view ? "" : c.view)}
             className={`rounded-xl border bg-white p-4 text-left transition ${view === c.view ? `border-transparent ring-2 ${c.ring}` : "border-slate-200 hover:bg-slate-50"}`}>
             <p className="text-xs font-medium text-slate-500">{c.label}</p>
-            <p className={`mt-1 text-3xl font-bold tabular-nums ${c.tone}`}>{summary[c.key] ?? 0}</p>
+            <p className={`mt-1 text-3xl font-bold tabular-nums ${c.tone}`}>{summary[c.key]?.count ?? 0}</p>
+            <p className="mt-0.5 text-xs font-medium text-slate-400 tabular-nums">{formatTND(summary[c.key]?.cod)}</p>
           </button>
         ))}
+      </div>
+
+      {/* Dhay3in delay control */}
+      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 mb-4 text-sm">
+        <span className="text-red-800">Un colis devient <b>Dhay3in</b> après</span>
+        <input type="number" min={1} value={delayInput}
+          onChange={(e) => setDelayInput(e.target.value)}
+          onBlur={saveDelay}
+          onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur() }}
+          className="h-8 w-16 rounded-lg border border-red-300 bg-white px-2 text-center font-semibold text-red-700" />
+        <span className="text-red-800">jours sans être Payé ni Retour.</span>
+        <span className="ml-auto text-xs text-red-500">Modifiez et appuyez sur Entrée pour enregistrer</span>
       </div>
 
       {/* Charts — focused on parcels to verify (anti-loss) */}
@@ -167,6 +191,17 @@ export default function ColisPage() {
 
       {/* Filters */}
       <div className="space-y-2 mb-4">
+        {/* Prominent day picker */}
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2">
+          <span className="text-sm font-medium text-slate-700">📅 Filtrer par jour :</span>
+          <input type="date" value={day} onChange={(e) => { setDay(e.target.value); if (e.target.value) setRange("") }}
+            className={`h-9 rounded-lg border px-3 text-sm ${day ? "border-blue-600 ring-1 ring-blue-200 text-blue-700 font-medium" : "border-slate-300"}`} />
+          <span className="text-xs text-slate-400">({BASES.find((b) => b.value === basis)?.label})</span>
+          {day
+            ? <button onClick={() => setDay("")} className="ml-auto text-xs font-medium text-red-600 hover:underline">✕ Effacer le jour</button>
+            : <span className="ml-auto text-xs text-slate-400">Choisissez une date pour voir les colis de ce jour</span>}
+        </div>
+
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative flex-1 min-w-[220px] max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -181,24 +216,10 @@ export default function ColisPage() {
           </select>
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
-          {RANGES.map((r) => (
+          {RANGES.filter((r) => r.value !== "custom").map((r) => (
             <button key={r.value} onClick={() => { setRange(r.value); setDay("") }}
               className={`rounded-lg px-2.5 py-1 text-xs font-medium ${!day && range === r.value ? "bg-blue-700 text-white" : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"}`}>{r.label}</button>
           ))}
-          {range === "custom" && !day && (
-            <>
-              <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="h-8 rounded-lg border border-slate-300 px-2 text-xs" />
-              <span className="text-slate-400 text-xs">→</span>
-              <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="h-8 rounded-lg border border-slate-300 px-2 text-xs" />
-            </>
-          )}
-          <span className="mx-1 h-4 w-px bg-slate-200" />
-          <label className="flex items-center gap-1.5 text-xs text-slate-500">
-            Jour précis
-            <input type="date" value={day} onChange={(e) => { setDay(e.target.value); if (e.target.value) setRange("") }}
-              className={`h-8 rounded-lg border px-2 text-xs ${day ? "border-blue-500 ring-1 ring-blue-200 text-blue-700" : "border-slate-300"}`} />
-          </label>
-          {day && <button onClick={() => setDay("")} className="text-xs text-slate-400 hover:text-red-600 underline">effacer</button>}
         </div>
       </div>
 
