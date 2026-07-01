@@ -48,7 +48,7 @@ export default function VerifierPage() {
 
   return (
     <div>
-      <PageHeader title="Colis à vérifier"
+      <PageHeader title="Colis Dhay3in"
         subtitle={data ? `En cours depuis plus de ${data.delay} jours — à réclamer à Navex / livreur` : ""}
         action={
           <div className="flex flex-wrap gap-2 print:hidden">
@@ -61,7 +61,7 @@ export default function VerifierPage() {
 
       <div className="grid grid-cols-2 gap-3 mb-5 max-w-md">
         <div className="rounded-xl border border-red-200 bg-red-50 p-4">
-          <p className="text-xs font-medium text-red-600">Colis à vérifier</p>
+          <p className="text-xs font-medium text-red-600">Colis Dhay3in</p>
           <p className="mt-1 text-3xl font-bold tabular-nums text-red-700">{data?.count ?? 0}</p>
         </div>
         <div className="rounded-xl border border-slate-200 bg-white p-4">
@@ -71,7 +71,7 @@ export default function VerifierPage() {
       </div>
 
       {!loading && (data?.parcels.length ?? 0) === 0 ? (
-        <EmptyState title="Aucun colis à vérifier." hint="Tous les colis en cours ont été payés, retournés, ou sont encore dans le délai." />
+        <EmptyState title="Aucun colis Dhay3in." hint="Tous les colis en cours ont été payés, retournés, ou sont encore dans le délai." />
       ) : (
         <div className="rounded-xl border border-slate-200 bg-white overflow-x-auto">
           <table className="w-full text-sm">

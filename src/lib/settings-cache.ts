@@ -5,6 +5,8 @@ import { SystemSetting } from "@/lib/models/SystemSetting"
  * as needing verification with Navex/livreur. Configurable in Paramètres, default 3.
  */
 export async function getVerifyDelay(): Promise<number> {
+  const env = parseInt(process.env.VERIFY_DELAY_DAYS || "", 10)
+  if (Number.isFinite(env) && env > 0) return env
   try {
     const s = await SystemSetting.findOne({ key: "verifyDelayDays" }).lean<{ value?: any }>()
     const n = parseInt(String(s?.value ?? ""), 10)

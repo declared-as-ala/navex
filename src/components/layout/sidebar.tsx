@@ -7,7 +7,6 @@ import {
   Package,
   ScanLine,
   AlertTriangle,
-  Settings,
   ChevronLeft,
   ChevronRight,
   LogOut,
@@ -21,8 +20,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 const items = [
   { href: "/colis", label: "Colis", icon: Package },
   { href: "/scan", label: "Scanner", icon: ScanLine },
-  { href: "/verifier", label: "Colis à vérifier", icon: AlertTriangle },
-  { href: "/settings", label: "Paramètres", icon: Settings },
+  { href: "/verifier", label: "Colis Dhay3in", icon: AlertTriangle },
 ]
 
 export function Sidebar() {

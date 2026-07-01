@@ -39,7 +39,7 @@ const STATUSES = [
   { value: "en_cours", label: "En cours" },
   { value: "paye", label: "Payé" },
   { value: "retour", label: "Retour" },
-  { value: "a_verifier", label: "À vérifier" },
+  { value: "a_verifier", label: "Dhay3in" },
 ]
 
 function frDate(d?: string, withTime = false) {
@@ -62,6 +62,18 @@ export default function ColisPage() {
   const [basis, setBasis] = useState("remise")
   const [from, setFrom] = useState("")
   const [to, setTo] = useState("")
+  const [day, setDay] = useState("")
+
+  // Apply date params: an exact day takes priority over the range buttons.
+  const applyDate = useCallback((p: URLSearchParams) => {
+    if (day) {
+      const next = new Date(day); next.setDate(next.getDate() + 1)
+      p.set("range", "custom"); p.set("dateBasis", basis); p.set("from", day); p.set("to", next.toISOString().slice(0, 10))
+    } else if (range) {
+      p.set("range", range); p.set("dateBasis", basis)
+      if (range === "custom") { if (from) p.set("from", from); if (to) p.set("to", to) }
+    }
+  }, [day, range, basis, from, to])
 
   const load = useCallback(() => {
     setLoading(true)
@@ -69,17 +81,16 @@ export default function ColisPage() {
     const p = new URLSearchParams()
     if (q) p.set("q", q)
     if (view) p.set("view", view)
-    if (range) { p.set("range", range); p.set("dateBasis", basis) }
-    if (range === "custom") { if (from) p.set("from", from); if (to) p.set("to", to) }
+    applyDate(p)
     p.set("limit", "1000")
     fetch(`/api/parcels?${p}`).then((r) => r.json())
       .then((j) => { setParcels(j.data.parcels); setTotal(j.data.total); setSummary(j.data.summary || {}); setIsEmpty(j.data.isEmpty) })
       .finally(() => setLoading(false))
 
     const cp = new URLSearchParams()
-    if (range && range !== "custom") cp.set("range", range)
+    applyDate(cp)
     fetch(`/api/dashboard/stats?${cp}`).then((r) => r.json()).then((j) => setCharts(j.data)).catch(() => {})
-  }, [q, view, range, basis, from, to])
+  }, [q, view, applyDate])
   useEffect(() => { load() }, [load])
 
   function toggle(id: string) { setSelected((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n }) }
@@ -121,7 +132,7 @@ export default function ColisPage() {
           { key: "enCours", view: "en_cours", label: "En cours", tone: "text-blue-600", ring: "ring-blue-200" },
           { key: "paye", view: "paye", label: "Payé", tone: "text-green-600", ring: "ring-green-200" },
           { key: "retour", view: "retour", label: "Retour", tone: "text-orange-600", ring: "ring-orange-200" },
-          { key: "aVerifier", view: "a_verifier", label: "À vérifier", tone: "text-red-600", ring: "ring-red-200" },
+          { key: "aVerifier", view: "a_verifier", label: "Dhay3in", tone: "text-red-600", ring: "ring-red-200" },
         ].map((c) => (
           <button key={c.key} onClick={() => setView(view === c.view ? "" : c.view)}
             className={`rounded-xl border bg-white p-4 text-left transition ${view === c.view ? `border-transparent ring-2 ${c.ring}` : "border-slate-200 hover:bg-slate-50"}`}>
@@ -135,19 +146,19 @@ export default function ColisPage() {
       {charts && !isEmpty && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
           <ChartCard
-            title="Colis à vérifier par ancienneté"
+            title="Colis Dhay3in par ancienneté"
             subtitle={`${formatTND(charts.atRiskCod)} à risque — plus c'est vieux, plus c'est probablement perdu`}
           >
             {charts.agingBuckets.some((b) => b.value > 0) ? (
               <AgingBar data={charts.agingBuckets} />
-            ) : <p className="text-sm text-slate-400 py-12 text-center">Aucun colis à vérifier 🎉</p>}
+            ) : <p className="text-sm text-slate-400 py-12 text-center">Aucun colis Dhay3in 🎉</p>}
           </ChartCard>
 
-          <ChartCard title="Recouvrement par jour de remise" subtitle="Payé vs encore à vérifier, par jour">
+          <ChartCard title="Recouvrement par jour de remise" subtitle="Payé vs encore Dhay3in, par jour">
             {charts.activityByDay.length > 0 ? (
               <GroupedBar data={charts.activityByDay} xKey="day" series={[
                 { key: "payes", name: "Payé", color: COLORS.green },
-                { key: "averifier", name: "À vérifier", color: COLORS.red },
+                { key: "averifier", name: "Dhay3in", color: COLORS.red },
               ]} />
             ) : <p className="text-sm text-slate-400 py-12 text-center">Aucune activité</p>}
           </ChartCard>
@@ -171,16 +182,23 @@ export default function ColisPage() {
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
           {RANGES.map((r) => (
-            <button key={r.value} onClick={() => setRange(r.value)}
-              className={`rounded-lg px-2.5 py-1 text-xs font-medium ${range === r.value ? "bg-blue-700 text-white" : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"}`}>{r.label}</button>
+            <button key={r.value} onClick={() => { setRange(r.value); setDay("") }}
+              className={`rounded-lg px-2.5 py-1 text-xs font-medium ${!day && range === r.value ? "bg-blue-700 text-white" : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"}`}>{r.label}</button>
           ))}
-          {range === "custom" && (
+          {range === "custom" && !day && (
             <>
               <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="h-8 rounded-lg border border-slate-300 px-2 text-xs" />
               <span className="text-slate-400 text-xs">→</span>
               <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="h-8 rounded-lg border border-slate-300 px-2 text-xs" />
             </>
           )}
+          <span className="mx-1 h-4 w-px bg-slate-200" />
+          <label className="flex items-center gap-1.5 text-xs text-slate-500">
+            Jour précis
+            <input type="date" value={day} onChange={(e) => { setDay(e.target.value); if (e.target.value) setRange("") }}
+              className={`h-8 rounded-lg border px-2 text-xs ${day ? "border-blue-500 ring-1 ring-blue-200 text-blue-700" : "border-slate-300"}`} />
+          </label>
+          {day && <button onClick={() => setDay("")} className="text-xs text-slate-400 hover:text-red-600 underline">effacer</button>}
         </div>
       </div>
 
