@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react"
 import { toast } from "sonner"
 import { PageHeader, EmptyState, StatusBadge, formatTND } from "@/components/parcel-ui"
+import { SkeletonRows } from "@/components/skeletons"
 import { Button } from "@/components/ui/button"
 import { Search, RefreshCw } from "lucide-react"
 
@@ -48,6 +49,7 @@ function frDate(d?: string, withTime = false) {
 export default function ColisPage() {
   const [parcels, setParcels] = useState<Parcel[]>([])
   const [total, setTotal] = useState(0)
+  const [summary, setSummary] = useState<Record<string, number>>({})
   const [isEmpty, setIsEmpty] = useState(false)
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
@@ -67,7 +69,7 @@ export default function ColisPage() {
     if (range === "custom") { if (from) p.set("from", from); if (to) p.set("to", to) }
     p.set("limit", "1000")
     fetch(`/api/parcels?${p}`).then((r) => r.json())
-      .then((j) => { setParcels(j.data.parcels); setTotal(j.data.total); setIsEmpty(j.data.isEmpty) })
+      .then((j) => { setParcels(j.data.parcels); setTotal(j.data.total); setSummary(j.data.summary || {}); setIsEmpty(j.data.isEmpty) })
       .finally(() => setLoading(false))
   }, [q, view, range, basis, from, to])
   useEffect(() => { load() }, [load])
@@ -115,6 +117,22 @@ export default function ColisPage() {
         </div>
       </div>
 
+      {/* Summary (respects date filter) */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+        {[
+          { key: "enCours", view: "en_cours", label: "En cours", tone: "text-blue-600", ring: "ring-blue-200" },
+          { key: "paye", view: "paye", label: "Payé", tone: "text-green-600", ring: "ring-green-200" },
+          { key: "retour", view: "retour", label: "Retour", tone: "text-orange-600", ring: "ring-orange-200" },
+          { key: "aVerifier", view: "a_verifier", label: "À vérifier", tone: "text-red-600", ring: "ring-red-200" },
+        ].map((c) => (
+          <button key={c.key} onClick={() => setView(view === c.view ? "" : c.view)}
+            className={`rounded-xl border bg-white p-4 text-left transition ${view === c.view ? `border-transparent ring-2 ${c.ring}` : "border-slate-200 hover:bg-slate-50"}`}>
+            <p className="text-xs font-medium text-slate-500">{c.label}</p>
+            <p className={`mt-1 text-3xl font-bold tabular-nums ${c.tone}`}>{summary[c.key] ?? 0}</p>
+          </button>
+        ))}
+      </div>
+
       {isEmpty ? (
         <EmptyState title="Aucun colis scanné." hint="Scannez les codes-barres Navex dans le Scanner pour enregistrer les colis." />
       ) : (
@@ -135,7 +153,7 @@ export default function ColisPage() {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading ? (
-                <tr><td colSpan={9} className="px-3 py-8 text-center text-slate-400">Chargement…</td></tr>
+                <SkeletonRows rows={8} cols={9} />
               ) : parcels.length === 0 ? (
                 <tr><td colSpan={9} className="px-3 py-8 text-center text-slate-400">Aucun colis pour ce filtre</td></tr>
               ) : parcels.map((p) => (

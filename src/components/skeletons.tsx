@@ -78,6 +78,23 @@ export function SkeletonTable({ rows = 5, cols = 5 }: { rows?: number; cols?: nu
   )
 }
 
+/** Animated skeleton <tr> rows to drop inside an existing <tbody>. */
+export function SkeletonRows({ rows = 8, cols }: { rows?: number; cols: number }) {
+  return (
+    <>
+      {Array.from({ length: rows }).map((_, r) => (
+        <tr key={r}>
+          {Array.from({ length: cols }).map((_, c) => (
+            <td key={c} className="px-3 py-3">
+              <Skeleton className={cn("h-4", c === 0 ? "w-28" : "w-16")} />
+            </td>
+          ))}
+        </tr>
+      ))}
+    </>
+  )
+}
+
 export function SkeletonDashboardCards() {
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
