@@ -15,7 +15,7 @@ const MONGODB_URI = process.env.MONGODB_URI || ""
 if (!MONGODB_URI) { console.error("✗ MONGODB_URI manquant (.env.local ou variable d'environnement)"); process.exit(1) }
 
 const USERS = [
-  { name: "Super Admin", email: "admin@logiflow.tn", password: "admin123", role: "SUPER_ADMIN" as const },
+  { name: "Super Admin", email: "admin@mzali.tn", password: "admin123", role: "SUPER_ADMIN" as const },
   { name: "Opérateur Entrepôt", email: "operateur@logiflow.tn", password: "operateur123", role: "WAREHOUSE_OPERATOR" as const },
   { name: "Finance", email: "finance@logiflow.tn", password: "finance123", role: "FINANCE" as const },
 ]
