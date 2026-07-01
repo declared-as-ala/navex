@@ -6,7 +6,7 @@ import { ParcelScan } from "@/lib/models/ParcelScan"
 import { scanSchema } from "@/lib/validators"
 import { decideRemiseExisting, decideReturnReceive } from "@/lib/scan-engine"
 import { navexService } from "@/lib/navex/navex-client"
-import { mapToSimpleNavexStatus } from "@/lib/navex/navex-status.mapper"
+import { mapToSimpleNavexStatus, isNavexPaid } from "@/lib/navex/navex-status.mapper"
 import { mainStatus } from "@/lib/parcel-status"
 
 const SCAN_ROLES = ["SUPER_ADMIN", "ADMIN", "MANAGER", "WAREHOUSE_OPERATOR"]
@@ -130,6 +130,8 @@ export async function POST(req: NextRequest) {
     }
 
     const d = lookup.parcel
+    const navexStatus = mapToSimpleNavexStatus(d.navexStatusRaw)
+    const paid = isNavexPaid(d.navexStatusRaw)
     const created = await Order.create({
       externalOrderId: `NAVEX-${trackingCode}`,
       navexTrackingCode: trackingCode,
@@ -139,8 +141,12 @@ export async function POST(req: NextRequest) {
       navexCreatedAt: d.navexCreatedAt ? new Date(d.navexCreatedAt) : undefined,
       physicalStatus: "HANDED_TO_NAVEX",
       handedToNavexAt: new Date(),
-      navexStatus: mapToSimpleNavexStatus(d.navexStatusRaw),
+      navexStatus,
       navexRawStatus: d.navexStatusRaw,
+      paymentStatus: paid ? "PAID" : "PENDING",
+      paidAt: paid ? new Date() : undefined,
+      deliveredAt: navexStatus === "DELIVERED" ? new Date() : undefined,
+      lastNavexSyncAt: new Date(),
       scannedBy: session.user.id,
       isDemo: false,
     })
