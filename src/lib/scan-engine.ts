@@ -1,11 +1,9 @@
 /**
- * Pure scan-decision engine, shared by POST /api/scans and the test scenario so
- * the rules can never drift. Each function takes the current parcel state and
- * returns a decision; when ok=true the caller applies `mutate` before saving.
+ * Pure scan-decision engine, shared by POST /api/scans and the test scenario.
  */
 import type { IOrder } from "@/lib/models/Order"
 
-export type ScanResult = "OK" | "DUPLICATE" | "BLOCKED" | "OVERRIDE"
+export type ScanResult = "OK" | "DUPLICATE" | "BLOCKED"
 
 export interface ScanDecision {
   ok: boolean
@@ -19,49 +17,26 @@ function frDate(d?: Date) {
   return d ? new Intl.DateTimeFormat("fr-FR", { timeZone: "Africa/Tunis", dateStyle: "short", timeStyle: "short" }).format(d) : ""
 }
 
-/**
- * "Remise à Navex" for a parcel that already exists locally.
- * Any locally-known parcel was already scanned out, so re-scanning is a duplicate.
- */
-export function decideRemiseExisting(parcel: Pick<IOrder, "physicalStatus" | "handedToNavexAt">): ScanDecision {
+/** "Remise à Navex" for an already-known parcel → duplicate. */
+export function decideRemiseExisting(parcel: Pick<IOrder, "handedToNavexAt">): ScanDecision {
   const when = frDate(parcel.handedToNavexAt as Date | undefined)
   return {
-    ok: false,
-    result: "DUPLICATE",
-    code: "ALREADY_HANDED",
-    message: when ? `Ce colis a déjà été remis à Navex le ${when}.` : "Ce colis a déjà été remis à Navex.",
+    ok: false, result: "DUPLICATE", code: "ALREADY_EN_COURS",
+    message: when ? `Ce colis est déjà En cours depuis le ${when}.` : "Ce colis est déjà En cours.",
   }
 }
 
-/**
- * "Retour reçu" → RETURN_CONFIRMED.
- * Allowed only when Navex announced a return, unless a supervisor override.
- */
-export function decideReturnReceive(
-  parcel: Pick<IOrder, "physicalStatus" | "navexStatus">,
-  opts: { override?: boolean; canOverride?: boolean }
-): ScanDecision {
-  if (parcel.physicalStatus === "RETURN_CONFIRMED") {
-    return { ok: false, result: "DUPLICATE", code: "DUPLICATE", message: "Retour déjà confirmé physiquement." }
+/** "Retour reçu" → RETOUR. Blocked if already Payé; duplicate if already Retour. */
+export function decideReturnReceive(parcel: Pick<IOrder, "status" | "returnAt">): ScanDecision {
+  if (parcel.status === "PAYE") {
+    return { ok: false, result: "BLOCKED", code: "ALREADY_PAID", message: "Ce colis est déjà Payé. Impossible de le marquer Retour." }
   }
-  const announced = parcel.navexStatus === "RETURN" || parcel.physicalStatus === "RETURN_EXPECTED"
-  if (!announced) {
-    if (!opts.override) {
-      return { ok: false, result: "BLOCKED", code: "NOT_RETURN", message: "Ce colis n'est pas encore marqué Retour chez Navex." }
-    }
-    if (!opts.canOverride) {
-      return { ok: false, result: "BLOCKED", code: "OVERRIDE_FORBIDDEN", message: "Override réservé à l'administrateur." }
-    }
+  if (parcel.status === "RETOUR") {
+    const when = frDate(parcel.returnAt as Date | undefined)
+    return { ok: false, result: "DUPLICATE", code: "DUPLICATE", message: when ? `Retour déjà enregistré le ${when}.` : "Retour déjà enregistré." }
   }
-  const didOverride = !announced && !!opts.override
   return {
-    ok: true,
-    result: didOverride ? "OVERRIDE" : "OK",
-    code: "OK",
-    message: "Retour confirmé physiquement",
-    mutate: (p) => {
-      p.physicalStatus = "RETURN_CONFIRMED"
-      p.returnConfirmedAt = new Date()
-    },
+    ok: true, result: "OK", code: "OK", message: "Retour enregistré",
+    mutate: (p) => { p.status = "RETOUR"; p.returnAt = new Date() },
   }
 }

@@ -7,7 +7,7 @@ import {
   LayoutDashboard,
   Package,
   ScanLine,
-  Undo2,
+  AlertTriangle,
   Settings,
   ChevronLeft,
   ChevronRight,
@@ -23,7 +23,7 @@ const items = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/colis", label: "Colis", icon: Package },
   { href: "/scan", label: "Scanner", icon: ScanLine },
-  { href: "/returns", label: "Retours", icon: Undo2 },
+  { href: "/verifier", label: "Colis à vérifier", icon: AlertTriangle },
   { href: "/settings", label: "Paramètres", icon: Settings },
 ]
 

@@ -10,7 +10,7 @@
     "typecheck": "tsc --noEmit",
     "seed": "npx tsx scripts/seed.ts",
     "reset": "npx tsx scripts/reset-data.ts",
-    "test:lots": "npx tsx scripts/test-lots.ts",
+    "sync-indexes": "npx tsx scripts/sync-indexes.ts",
     "test:scenario": "npx tsx scripts/test-scenario.ts"
   },
   "dependencies": {

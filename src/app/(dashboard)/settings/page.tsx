@@ -8,9 +8,9 @@ import { Trash2, Plug } from "lucide-react"
 
 const FIELDS = [
   { key: "warehouseName", label: "Nom de l'entrepôt", placeholder: "Entrepôt principal" },
-  { key: "staleDays", label: "Seuil « Sans mise à jour » (jours)", placeholder: "7" },
+  { key: "verifyDelayDays", label: "Délai « À vérifier » (jours)", placeholder: "3" },
   { key: "navexLookupEndpoint", label: "Navex — endpoint de recherche colis", placeholder: "https://app.navex.tn/api/<token>/lookup" },
-  { key: "navexStatusEndpoint", label: "Navex — endpoint sync statut", placeholder: "https://app.navex.tn/api/<token>/status" },
+  { key: "navexStatusEndpoint", label: "Navex — endpoint paiements", placeholder: "https://app.navex.tn/api/<token>/status" },
 ]
 
 export default function SettingsPage() {

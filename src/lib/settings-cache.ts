@@ -1,14 +1,15 @@
 import { SystemSetting } from "@/lib/models/SystemSetting"
 
 /**
- * "Sans mise à jour" threshold in days (configurable in Paramètres, default 7).
+ * "À vérifier" delay in days — a parcel EN_COURS older than this is flagged
+ * as needing verification with Navex/livreur. Configurable in Paramètres, default 3.
  */
-export async function getStaleDays(): Promise<number> {
+export async function getVerifyDelay(): Promise<number> {
   try {
-    const s = await SystemSetting.findOne({ key: "staleDays" }).lean<{ value?: any }>()
+    const s = await SystemSetting.findOne({ key: "verifyDelayDays" }).lean<{ value?: any }>()
     const n = parseInt(String(s?.value ?? ""), 10)
-    return Number.isFinite(n) && n > 0 ? n : 7
+    return Number.isFinite(n) && n > 0 ? n : 3
   } catch {
-    return 7
+    return 3
   }
 }

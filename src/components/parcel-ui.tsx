@@ -16,30 +16,10 @@ const TONE: Record<Tone, string> = {
   red: "bg-red-50 text-red-700 ring-red-200",
 }
 
-const PHYSICAL: Record<string, { label: string; tone: Tone }> = {
-  NOT_SCANNED: { label: "Non scanné", tone: "neutral" },
-  HANDED_TO_NAVEX: { label: "Remis à Navex", tone: "indigo" },
-  RETURN_EXPECTED: { label: "Retour attendu", tone: "orange" },
-  RETURN_CONFIRMED: { label: "Retour confirmé", tone: "green" },
-}
-const NAVEX: Record<string, { label: string; tone: Tone }> = {
-  PENDING: { label: "En attente", tone: "neutral" },
-  IN_TRANSIT: { label: "En transit", tone: "blue" },
-  OUT_FOR_DELIVERY: { label: "En livraison", tone: "blue" },
-  DELIVERED: { label: "Livré", tone: "green" },
-  RETURN: { label: "Retour", tone: "orange" },
-  CANCELLED: { label: "Annulé", tone: "neutral" },
-  UNKNOWN: { label: "Inconnu", tone: "red" },
-}
-const MAIN: Record<string, { label: string; tone: Tone }> = {
+const STATUS: Record<string, { label: string; tone: Tone }> = {
   EN_COURS: { label: "En cours", tone: "blue" },
-  LIVRE: { label: "Livré", tone: "green" },
-  RETOUR_ATTENDU: { label: "Retour attendu", tone: "orange" },
-  RETOUR_CONFIRME: { label: "Retour confirmé", tone: "green" },
-}
-const PAYMENT: Record<string, { label: string; tone: Tone }> = {
-  PENDING: { label: "En attente", tone: "neutral" },
-  PAID: { label: "Payé", tone: "green" },
+  PAYE: { label: "Payé", tone: "green" },
+  RETOUR: { label: "Retour", tone: "orange" },
 }
 
 function Pill({ label, tone }: { label: string; tone: Tone }) {
@@ -50,20 +30,8 @@ function Pill({ label, tone }: { label: string; tone: Tone }) {
   )
 }
 
-export function PhysicalBadge({ status }: { status: string }) {
-  const s = PHYSICAL[status] || { label: status, tone: "neutral" as Tone }
-  return <Pill label={s.label} tone={s.tone} />
-}
-export function NavexBadge({ status }: { status: string }) {
-  const s = NAVEX[status] || { label: status, tone: "neutral" as Tone }
-  return <Pill label={s.label} tone={s.tone} />
-}
-export function MainStatusBadge({ status }: { status: string }) {
-  const s = MAIN[status] || { label: status, tone: "neutral" as Tone }
-  return <Pill label={s.label} tone={s.tone} />
-}
-export function PaymentBadge({ status }: { status: string }) {
-  const s = PAYMENT[status] || { label: status, tone: "neutral" as Tone }
+export function StatusBadge({ status }: { status: string }) {
+  const s = STATUS[status] || { label: status, tone: "neutral" as Tone }
   return <Pill label={s.label} tone={s.tone} />
 }
 

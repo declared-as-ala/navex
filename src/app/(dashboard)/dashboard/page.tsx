@@ -6,26 +6,21 @@ import { PageHeader, EmptyState } from "@/components/parcel-ui"
 import { SkeletonPageHeader, SkeletonDashboardCards } from "@/components/skeletons"
 import { Button } from "@/components/ui/button"
 import { ChartCard, SingleBar, GroupedBar, COLORS } from "@/components/charts"
-import {
-  ScanLine, Truck, CheckCircle2, Banknote, CornerUpLeft, RotateCcw, AlertTriangle, HelpCircle,
-} from "lucide-react"
+import { ScanLine, Truck, Banknote, CornerUpLeft, AlertTriangle } from "lucide-react"
 
 interface Stats {
   cards: Record<string, number>
   activityByDay: any[]
-  returnsChart: any[]
+  reconciliation: any[]
   isEmpty: boolean
 }
 
 const CARDS: { key: string; label: string; icon: any; tone: string }[] = [
   { key: "scannedToday", label: "Scannés aujourd'hui", icon: ScanLine, tone: "text-blue-600" },
   { key: "enCours", label: "En cours", icon: Truck, tone: "text-blue-600" },
-  { key: "livres", label: "Livrés", icon: CheckCircle2, tone: "text-green-600" },
-  { key: "payes", label: "Payés", icon: Banknote, tone: "text-green-600" },
-  { key: "retoursAnnonces", label: "Retours annoncés", icon: CornerUpLeft, tone: "text-orange-600" },
-  { key: "retoursConfirmes", label: "Retours confirmés", icon: RotateCcw, tone: "text-green-600" },
-  { key: "retoursManquants", label: "Retours manquants", icon: AlertTriangle, tone: "text-red-600" },
-  { key: "sansMaj", label: "Sans mise à jour", icon: HelpCircle, tone: "text-slate-500" },
+  { key: "paye", label: "Payé", icon: Banknote, tone: "text-green-600" },
+  { key: "retour", label: "Retour", icon: CornerUpLeft, tone: "text-orange-600" },
+  { key: "aVerifier", label: "Colis à vérifier", icon: AlertTriangle, tone: "text-red-600" },
 ]
 
 const RANGES = [
@@ -52,16 +47,12 @@ export default function DashboardPage() {
 
   return (
     <div>
-      <PageHeader
-        title="Dashboard"
-        subtitle="Contrôle quotidien des colis Navex"
+      <PageHeader title="Dashboard" subtitle="Contrôle anti-perte des colis Navex"
         action={
           <div className="flex flex-wrap gap-1.5">
             {RANGES.map((r) => (
               <button key={r.value} onClick={() => setRange(r.value)}
-                className={`rounded-lg px-2.5 py-1 text-xs font-medium ${range === r.value ? "bg-blue-700 text-white" : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"}`}>
-                {r.label}
-              </button>
+                className={`rounded-lg px-2.5 py-1 text-xs font-medium ${range === r.value ? "bg-blue-700 text-white" : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"}`}>{r.label}</button>
             ))}
           </div>
         }
@@ -72,7 +63,7 @@ export default function DashboardPage() {
           action={<Link href="/scan"><Button>Ouvrir le Scanner</Button></Link>} />
       ) : (
         <>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             {CARDS.map((c) => {
               const Icon = c.icon
               return (
@@ -88,23 +79,19 @@ export default function DashboardPage() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-6">
-            <ChartCard title="Activité par jour" subtitle="Remis / Livrés / Retours annoncés / confirmés">
+            <ChartCard title="Activité par jour" subtitle="Scannés / Payé / Retour / À vérifier">
               {stats && stats.activityByDay.length > 0 ? (
-                <GroupedBar
-                  data={stats.activityByDay}
-                  xKey="day"
-                  series={[
-                    { key: "remis", name: "Remis", color: COLORS.blue },
-                    { key: "livres", name: "Livrés", color: COLORS.green },
-                    { key: "retoursAnnonces", name: "Retours annoncés", color: COLORS.orange },
-                    { key: "retoursConfirmes", name: "Retours confirmés", color: COLORS.indigo },
-                  ]}
-                />
+                <GroupedBar data={stats.activityByDay} xKey="day" series={[
+                  { key: "scannes", name: "Scannés", color: COLORS.blue },
+                  { key: "payes", name: "Payé", color: COLORS.green },
+                  { key: "retours", name: "Retour", color: COLORS.orange },
+                  { key: "averifier", name: "À vérifier", color: COLORS.red },
+                ]} />
               ) : <p className="text-sm text-slate-400 py-12 text-center">Aucune activité sur la période</p>}
             </ChartCard>
 
-            <ChartCard title="Réconciliation des retours" subtitle="Annoncés → Confirmés → Manquants">
-              <SingleBar height={220} data={stats!.returnsChart} />
+            <ChartCard title="Réconciliation" subtitle="Scannés = Payé + Retour + À vérifier">
+              <SingleBar height={220} data={stats!.reconciliation} />
             </ChartCard>
           </div>
         </>

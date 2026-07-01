@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react"
 import { toast } from "sonner"
-import { PageHeader, EmptyState, NavexBadge, MainStatusBadge, PaymentBadge, formatTND } from "@/components/parcel-ui"
+import { PageHeader, EmptyState, StatusBadge, formatTND } from "@/components/parcel-ui"
 import { Button } from "@/components/ui/button"
 import { Search, RefreshCw } from "lucide-react"
 
@@ -13,9 +13,9 @@ interface Parcel {
   designation?: string
   navexCreatedAt?: string
   handedToNavexAt?: string
-  navexStatus: string
-  mainStatus: string
-  paymentStatus: string
+  status: string
+  paidAt?: string
+  returnAt?: string
   updatedAt: string
 }
 
@@ -29,18 +29,15 @@ const RANGES = [
 ]
 const BASES = [
   { value: "remise", label: "Date remise à Navex" },
-  { value: "navex", label: "Date statut Navex" },
-  { value: "retour", label: "Date retour confirmé" },
+  { value: "paiement", label: "Date paiement" },
+  { value: "retour", label: "Date retour" },
 ]
 const STATUSES = [
   { value: "", label: "Tous" },
   { value: "en_cours", label: "En cours" },
-  { value: "livres", label: "Livrés" },
-  { value: "payes", label: "Payés" },
-  { value: "retours_attendus", label: "Retours attendus" },
-  { value: "retours_confirmes", label: "Retours confirmés" },
-  { value: "retours_manquants", label: "Retours manquants" },
-  { value: "sans_maj", label: "Sans mise à jour" },
+  { value: "paye", label: "Payé" },
+  { value: "retour", label: "Retour" },
+  { value: "a_verifier", label: "À vérifier" },
 ]
 
 function frDate(d?: string, withTime = false) {
@@ -77,21 +74,18 @@ export default function ColisPage() {
 
   async function sync() {
     setSyncing(true)
-    const j = await (await fetch("/api/parcels/sync", { method: "POST" })).json()
+    const res = await fetch("/api/parcels/sync", { method: "POST" })
+    const j = await res.json()
     setSyncing(false)
-    if (j.success) { toast.success(`Synchronisé : ${j.data.synced} colis mis à jour`); load() }
-    else toast.error(j.error?.message || j.error || "Erreur de synchronisation")
+    if (j.success) { toast.success(`${j.data.paid} colis marqués Payé`); load() }
+    else toast.error(j.error?.message || j.error || "Synchronisation indisponible")
   }
 
   return (
     <div>
-      <PageHeader
-        title="Colis"
-        subtitle={`${total} colis`}
-        action={<Button onClick={sync} disabled={syncing}><RefreshCw className={`h-4 w-4 mr-2 ${syncing ? "animate-spin" : ""}`} />Synchroniser Navex</Button>}
-      />
+      <PageHeader title="Colis" subtitle={`${total} colis`}
+        action={<Button onClick={sync} disabled={syncing}><RefreshCw className={`h-4 w-4 mr-2 ${syncing ? "animate-spin" : ""}`} />Synchroniser les paiements Navex</Button>} />
 
-      {/* Filters */}
       <div className="space-y-2 mb-4">
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative flex-1 min-w-[220px] max-w-sm">
@@ -109,9 +103,7 @@ export default function ColisPage() {
         <div className="flex flex-wrap items-center gap-1.5">
           {RANGES.map((r) => (
             <button key={r.value} onClick={() => setRange(r.value)}
-              className={`rounded-lg px-2.5 py-1 text-xs font-medium ${range === r.value ? "bg-blue-700 text-white" : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"}`}>
-              {r.label}
-            </button>
+              className={`rounded-lg px-2.5 py-1 text-xs font-medium ${range === r.value ? "bg-blue-700 text-white" : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"}`}>{r.label}</button>
           ))}
           {range === "custom" && (
             <>
@@ -135,9 +127,9 @@ export default function ColisPage() {
                 <th className="px-3 py-2.5 font-medium">Ajout Navex</th>
                 <th className="px-3 py-2.5 font-medium">Désignation</th>
                 <th className="px-3 py-2.5 font-medium">Date remise</th>
-                <th className="px-3 py-2.5 font-medium">Statut Navex</th>
                 <th className="px-3 py-2.5 font-medium">Statut</th>
-                <th className="px-3 py-2.5 font-medium">Paiement</th>
+                <th className="px-3 py-2.5 font-medium">Date paiement</th>
+                <th className="px-3 py-2.5 font-medium">Date retour</th>
                 <th className="px-3 py-2.5 font-medium">Dernière MAJ</th>
               </tr>
             </thead>
@@ -153,9 +145,9 @@ export default function ColisPage() {
                   <td className="px-3 py-2.5 text-xs text-slate-500">{frDate(p.navexCreatedAt)}</td>
                   <td className="px-3 py-2.5 text-slate-600 max-w-[180px] truncate">{p.designation || "—"}</td>
                   <td className="px-3 py-2.5 text-xs text-slate-500">{frDate(p.handedToNavexAt, true)}</td>
-                  <td className="px-3 py-2.5"><NavexBadge status={p.navexStatus} /></td>
-                  <td className="px-3 py-2.5"><MainStatusBadge status={p.mainStatus} /></td>
-                  <td className="px-3 py-2.5"><PaymentBadge status={p.paymentStatus} /></td>
+                  <td className="px-3 py-2.5"><StatusBadge status={p.status} /></td>
+                  <td className="px-3 py-2.5 text-xs text-slate-500">{frDate(p.paidAt)}</td>
+                  <td className="px-3 py-2.5 text-xs text-slate-500">{frDate(p.returnAt)}</td>
                   <td className="px-3 py-2.5 text-xs text-slate-400">{frDate(p.updatedAt, true)}</td>
                 </tr>
               ))}

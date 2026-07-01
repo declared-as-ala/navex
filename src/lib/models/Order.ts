@@ -1,127 +1,64 @@
 import mongoose, { Schema, Document } from "mongoose"
 
 /**
- * Parcel (Colis) — the single canonical entity LogiFlow controls.
+ * Parcel (Colis) — anti-loss control unit.
  *
- * A parcel exists in LogiFlow only AFTER it has been physically scanned at the
- * warehouse in "Remise à Navex" mode, at which point its real data is fetched
- * from Navex. Parcels are NEVER created with fake/empty data.
+ * A parcel exists only after it is physically scanned in "Remise à Navex", at
+ * which point its real data is fetched from Navex. Only 3 statuses exist:
+ *   EN_COURS — scanned out to Navex, not yet paid or returned
+ *   PAYE     — Navex confirmed the COD was paid (payment sync)
+ *   RETOUR   — physically scanned back at the warehouse ("Retour reçu")
  *
- * Two independent status dimensions:
- *  - physicalStatus : where the physical package is, confirmed by warehouse scans
- *  - navexStatus    : the delivery status reported by Navex (announcement only)
+ * "À vérifier" is NOT a status — it is derived: EN_COURS older than the delay.
  */
+export type ParcelStatus = "EN_COURS" | "PAYE" | "RETOUR"
 
-export type PhysicalStatus =
-  | "NOT_SCANNED"
-  | "HANDED_TO_NAVEX"   // physically scanned out → handed to Navex
-  | "RETURN_EXPECTED"   // Navex announced a return (NOT physically back)
-  | "RETURN_CONFIRMED"  // warehouse physically scanned the returned package
-
-export type NavexStatus =
-  | "PENDING"
-  | "IN_TRANSIT"
-  | "OUT_FOR_DELIVERY"
-  | "DELIVERED"
-  | "RETURN"
-  | "CANCELLED"   // Annulé — ignored in the whole UI
-  | "UNKNOWN"
-
-export type PaymentStatus = "PENDING" | "PAID"
-
-export const PHYSICAL_STATUSES: PhysicalStatus[] = [
-  "NOT_SCANNED", "HANDED_TO_NAVEX", "RETURN_EXPECTED", "RETURN_CONFIRMED",
-]
-export const NAVEX_STATUSES: NavexStatus[] = [
-  "PENDING", "IN_TRANSIT", "OUT_FOR_DELIVERY", "DELIVERED", "RETURN", "CANCELLED", "UNKNOWN",
-]
-
-export interface ICustomer {
-  name: string
-  phone: string
-  governorate: string
-  city: string
-  address: string
-}
+export const PARCEL_STATUSES: ParcelStatus[] = ["EN_COURS", "PAYE", "RETOUR"]
 
 export interface IOrder extends Document {
-  externalOrderId: string
   navexTrackingCode: string
-  navexLabelUrl?: string
+  codAmount: number
+  designation?: string
   navexCreatedAt?: Date
 
-  customer: ICustomer
-  designation?: string
-  codAmount: number
-
-  physicalStatus: PhysicalStatus
-  navexStatus: NavexStatus
+  status: ParcelStatus
   navexRawStatus?: string
-  paymentStatus: PaymentStatus
 
-  // lifecycle timestamps
-  handedToNavexAt?: Date
-  deliveredAt?: Date
-  paidAt?: Date
-  returnExpectedAt?: Date
-  returnConfirmedAt?: Date
+  handedToNavexAt?: Date   // Date remise à Navex (grouping key)
+  paidAt?: Date            // Date paiement
+  returnAt?: Date          // Date retour (physical scan)
   lastNavexSyncAt?: Date
 
   scannedBy?: mongoose.Types.ObjectId
-  returnConfirmedBy?: mongoose.Types.ObjectId
+  returnBy?: mongoose.Types.ObjectId
 
-  isDemo?: boolean
   createdAt: Date
   updatedAt: Date
 }
 
-const CustomerSchema = new Schema<ICustomer>(
-  {
-    name: { type: String, default: "" },
-    phone: { type: String, default: "" },
-    governorate: { type: String, default: "" },
-    city: { type: String, default: "" },
-    address: { type: String, default: "" },
-  },
-  { _id: false }
-)
-
 const OrderSchema = new Schema<IOrder>(
   {
-    externalOrderId: { type: String, required: true, unique: true },
     navexTrackingCode: { type: String, required: true, unique: true },
-    navexLabelUrl: { type: String },
+    codAmount: { type: Number, required: true, min: 0 },
+    designation: { type: String },
     navexCreatedAt: { type: Date },
 
-    customer: { type: CustomerSchema, required: true },
-    designation: { type: String },
-    codAmount: { type: Number, required: true, min: 0 },
-
-    physicalStatus: { type: String, enum: PHYSICAL_STATUSES, default: "HANDED_TO_NAVEX" },
-    navexStatus: { type: String, enum: NAVEX_STATUSES, default: "PENDING" },
+    status: { type: String, enum: PARCEL_STATUSES, default: "EN_COURS" },
     navexRawStatus: { type: String },
-    paymentStatus: { type: String, enum: ["PENDING", "PAID"], default: "PENDING" },
 
     handedToNavexAt: { type: Date },
-    deliveredAt: { type: Date },
     paidAt: { type: Date },
-    returnExpectedAt: { type: Date },
-    returnConfirmedAt: { type: Date },
+    returnAt: { type: Date },
     lastNavexSyncAt: { type: Date },
 
     scannedBy: { type: Schema.Types.ObjectId, ref: "User" },
-    returnConfirmedBy: { type: Schema.Types.ObjectId, ref: "User" },
-
-    isDemo: { type: Boolean, default: false },
+    returnBy: { type: Schema.Types.ObjectId, ref: "User" },
   },
   { timestamps: true }
 )
 
-OrderSchema.index({ physicalStatus: 1 })
-OrderSchema.index({ navexStatus: 1 })
-OrderSchema.index({ "customer.phone": 1 })
+OrderSchema.index({ status: 1 })
+OrderSchema.index({ handedToNavexAt: -1 })
 
 export const Order = mongoose.models.Order || mongoose.model<IOrder>("Order", OrderSchema)
-
-// Backwards-friendly alias: a parcel is the canonical unit of work.
 export const Parcel = Order
