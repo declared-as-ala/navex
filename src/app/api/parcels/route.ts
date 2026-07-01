@@ -36,18 +36,28 @@ export async function GET(req: NextRequest) {
   const filter = { ...baseFilter, ...statusViewFilter(sp.get("view") || "", delay) }
   const limit = Math.min(parseInt(sp.get("limit") || "300", 10), 2000)
 
-  const [parcels, total, enCours, paye, retour, aVerifier, isEmptyCount] = await Promise.all([
+  const [parcels, total, byStatus, avAgg, isEmptyCount] = await Promise.all([
     Order.find(filter).sort({ handedToNavexAt: -1, updatedAt: -1 }).limit(limit).lean(),
     Order.countDocuments(filter),
-    Order.countDocuments({ ...baseFilter, status: "EN_COURS" }),
-    Order.countDocuments({ ...baseFilter, status: "PAYE" }),
-    Order.countDocuments({ ...baseFilter, status: "RETOUR" }),
-    Order.countDocuments({ ...baseFilter, status: "EN_COURS", handedToNavexAt: { $lte: verifyThreshold(delay) } }),
+    Order.aggregate([{ $match: baseFilter }, { $group: { _id: "$status", count: { $sum: 1 }, cod: { $sum: "$codAmount" } } }]),
+    Order.aggregate([
+      { $match: { ...baseFilter, status: "EN_COURS", handedToNavexAt: { $lte: verifyThreshold(delay) } } },
+      { $group: { _id: null, count: { $sum: 1 }, cod: { $sum: "$codAmount" } } },
+    ]),
     Order.estimatedDocumentCount(),
   ])
 
-  return NextResponse.json({
-    success: true,
-    data: { parcels, total, summary: { enCours, paye, retour, aVerifier }, isEmpty: isEmptyCount === 0 },
-  })
+  const pick = (s: string) => {
+    const r = (byStatus as any[]).find((x) => x._id === s)
+    return { count: r?.count || 0, cod: r?.cod || 0 }
+  }
+  const av = (avAgg as any[])[0] || { count: 0, cod: 0 }
+  const summary = {
+    enCours: pick("EN_COURS"),
+    paye: pick("PAYE"),
+    retour: pick("RETOUR"),
+    aVerifier: { count: av.count || 0, cod: av.cod || 0 },
+  }
+
+  return NextResponse.json({ success: true, data: { parcels, total, summary, delay, isEmpty: isEmptyCount === 0 } })
 }
