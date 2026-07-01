@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react"
 import { toast } from "sonner"
 import { PageHeader, EmptyState, StatusBadge, formatTND } from "@/components/parcel-ui"
 import { SkeletonRows } from "@/components/skeletons"
-import { ChartCard, SingleBar, GroupedBar, COLORS } from "@/components/charts"
+import { ChartCard, AgingBar, GroupedBar, COLORS } from "@/components/charts"
 import { Button } from "@/components/ui/button"
 import { Search, RefreshCw, Trash2 } from "lucide-react"
 
@@ -51,7 +51,7 @@ export default function ColisPage() {
   const [parcels, setParcels] = useState<Parcel[]>([])
   const [total, setTotal] = useState(0)
   const [summary, setSummary] = useState<Record<string, number>>({})
-  const [charts, setCharts] = useState<{ activityByDay: any[]; reconciliation: any[] } | null>(null)
+  const [charts, setCharts] = useState<{ activityByDay: any[]; agingBuckets: any[]; atRiskCod: number } | null>(null)
   const [isEmpty, setIsEmpty] = useState(false)
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
@@ -131,21 +131,25 @@ export default function ColisPage() {
         ))}
       </div>
 
-      {/* Charts */}
+      {/* Charts — focused on parcels to verify (anti-loss) */}
       {charts && !isEmpty && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
-          <ChartCard title="Activité par jour" subtitle="Scannés / Payé / Retour / À vérifier">
+          <ChartCard
+            title="Colis à vérifier par ancienneté"
+            subtitle={`${formatTND(charts.atRiskCod)} à risque — plus c'est vieux, plus c'est probablement perdu`}
+          >
+            {charts.agingBuckets.some((b) => b.value > 0) ? (
+              <AgingBar data={charts.agingBuckets} />
+            ) : <p className="text-sm text-slate-400 py-12 text-center">Aucun colis à vérifier 🎉</p>}
+          </ChartCard>
+
+          <ChartCard title="Recouvrement par jour de remise" subtitle="Payé vs encore à vérifier, par jour">
             {charts.activityByDay.length > 0 ? (
               <GroupedBar data={charts.activityByDay} xKey="day" series={[
-                { key: "scannes", name: "Scannés", color: COLORS.blue },
                 { key: "payes", name: "Payé", color: COLORS.green },
-                { key: "retours", name: "Retour", color: COLORS.orange },
                 { key: "averifier", name: "À vérifier", color: COLORS.red },
               ]} />
             ) : <p className="text-sm text-slate-400 py-12 text-center">Aucune activité</p>}
-          </ChartCard>
-          <ChartCard title="Réconciliation" subtitle="Scannés = Payé + Retour + À vérifier">
-            <SingleBar height={220} data={charts.reconciliation} />
           </ChartCard>
         </div>
       )}

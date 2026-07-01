@@ -88,6 +88,38 @@ export function GroupedBar({ data, series, height = 260, onBarClick, xKey = "nam
   )
 }
 
+function fmtDT(n: number) {
+  return `${(n || 0).toFixed(3).replace(/\.?0+$/, "")} DT`
+}
+function AgingTooltip({ active, payload }: any) {
+  if (!active || !payload?.length) return null
+  const d = payload[0].payload
+  return (
+    <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs shadow-sm">
+      <p className="font-semibold text-slate-800">{d.name}</p>
+      <p className="text-slate-600">{d.value} colis</p>
+      <p className="text-red-600 font-medium">{fmtDT(d.cod)} à risque</p>
+    </div>
+  )
+}
+
+/** Horizontal aging bars for "à vérifier" parcels, with a count + COD tooltip. */
+export function AgingBar({ data, height = 220 }: { data: { name: string; value: number; cod: number; color: string }[]; height?: number }) {
+  return (
+    <ResponsiveContainer width="100%" height={height}>
+      <BarChart data={data} layout="vertical" margin={{ left: 8, right: 20 }}>
+        <CartesianGrid horizontal={false} stroke="#f1f5f9" />
+        <XAxis type="number" tick={{ fontSize: 11, fill: "#94a3b8" }} allowDecimals={false} />
+        <YAxis type="category" dataKey="name" width={72} tick={{ fontSize: 11, fill: "#475569" }} />
+        <Tooltip content={<AgingTooltip />} cursor={{ fill: "#f8fafc" }} />
+        <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={24} label={{ position: "right", fontSize: 11, fill: "#64748b" }}>
+          {data.map((d, i) => <Cell key={i} fill={d.color} />)}
+        </Bar>
+      </BarChart>
+    </ResponsiveContainer>
+  )
+}
+
 export function Donut({ data, centerLabel, height = 240 }: {
   data: { name: string; value: number; key?: string; color?: string }[]
   centerLabel?: string | number
