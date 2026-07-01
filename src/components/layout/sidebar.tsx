@@ -4,7 +4,6 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import {
-  LayoutDashboard,
   Package,
   ScanLine,
   AlertTriangle,
@@ -20,7 +19,6 @@ import { useState } from "react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 
 const items = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/colis", label: "Colis", icon: Package },
   { href: "/scan", label: "Scanner", icon: ScanLine },
   { href: "/verifier", label: "Colis à vérifier", icon: AlertTriangle },

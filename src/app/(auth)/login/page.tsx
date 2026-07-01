@@ -28,7 +28,7 @@ export default function LoginPage() {
         return
       }
 
-      router.push("/dashboard")
+      router.push("/colis")
     } catch {
       toast.error("Erreur", { description: "Une erreur est survenue" })
     } finally {
